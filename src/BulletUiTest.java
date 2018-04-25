@@ -12,6 +12,10 @@ public class BulletUiTest {
   private float sx = 50;
   private float sy = 50;
 
+  private final double dt = .001f;
+
+  private double time = 0;
+
   private BulletUiTest(Walls manager) {
     mManager = manager;
     mComponent = new MyComponent();
@@ -22,8 +26,10 @@ public class BulletUiTest {
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     frame.setVisible(true);
 
+
     new Timer(0, e -> {
-      mManager.update(.001f);
+      time += dt;
+      mManager.update(time);
       mComponent.repaint();
     }).start();
 
@@ -40,9 +46,11 @@ public class BulletUiTest {
 
       g.setColor(Color.red);
       for (Walls.Bullet b : mManager.bullets) {
-        g.drawRect(getX(b.getX()), getY(b.getY()), 2, 2);
+        double dt = time - b.time;
+        double x = b.px + dt * b.dx;
+        double y = b.py + dt * b.dy;
+        g.drawRect(getX(x), getY(y), 2, 2);
       }
-
     }
 
     private int getX(double f) {
@@ -50,16 +58,15 @@ public class BulletUiTest {
     }
 
     private int getY(double f) {
-      return (int) (f * getWidth() / sy) + getHeight() / 2;
+      return (int) (f * getHeight() / sy) + getHeight() / 2;
     }
   }
 
   public static void main(String[] args) {
     SwingUtilities.invokeLater(() -> {
       try {
-        String dir = "/Users/ruslan/workspace/BulletsToTheWalls/src/";
-        new BulletUiTest(new Walls(new FileInputStream(dir + "input.txt"),
-            new PrintStream(new FileOutputStream(dir + "output.txt")), false));
+        new BulletUiTest(new Walls(new FileInputStream("src/input.txt"),
+            new PrintStream(new FileOutputStream("src/output.txt"))));
       } catch (FileNotFoundException e) {
         e.printStackTrace();
       }

@@ -4,16 +4,15 @@ import java.io.PrintStream;
 import java.util.*;
 
 class Walls {
-  private double time = 0f;
   final Set<Wall> walls = new HashSet<>();
   final List<Bullet> bullets = new ArrayList<>();
   private final TreeSet<Collision> collisions = new TreeSet<>();
 
   public static void main(String[] args) throws IOException {
-    new Walls(System.in, System.out, true);
+    new Walls(System.in, System.out);
   }
 
-  Walls(InputStream in, PrintStream out, boolean update) {
+  Walls(InputStream in, PrintStream out) {
     Scanner scan = new Scanner(in);
     int n = scan.nextInt();
     int m = scan.nextInt();
@@ -28,57 +27,52 @@ class Walls {
     }
 
     for (Bullet b : bullets) {
-      Collision next = nextCollision(new Collision(0, b, null));
+      Collision next = nextCollision(b);
       if (next != null) collisions.add(next);
     }
 
-    if (update) {
-      for (int i = 0; i < k; i++) {
-        char c = scan.next().charAt(0);
-        if (c == 'u') {
-          double dt = scan.nextDouble();
-          update(dt);
-        } else {
-          bullets.get(scan.nextInt()).printPosition(out);
-        }
+    double time = 0;
+    for (int i = 0; i < k; i++) {
+      char c = scan.next().charAt(0);
+      if (c == 'u') {
+        time += scan.nextDouble();
+        update(time);
+      } else {
+        bullets.get(scan.nextInt()).printPosition(out, time);
       }
     }
   }
 
-  void update(double dt) {
-    time += dt;
+  void update(double time) {
     while (!collisions.isEmpty() && collisions.first().time <= time) {
       Collision e = collisions.pollFirst();
-      if (walls.contains(e.wall)) {
-        Bullet b = e.bullet;
-//        System.out.printf("bullet: %f %f  collision: %f %f", b.getX(), b.getY());
-        b.reflect(e.wall);
-        b.lastCollisionTime = e.time;
-        walls.remove(e.wall);
+      Bullet b = e.bullet;
+      Wall w = e.wall;
+      if (walls.contains(w)) {
+        b.reflect(w, e.time);
+        walls.remove(w);
       }
-      Collision next = nextCollision(e);
+      Collision next = nextCollision(b);
       if (next != null) collisions.add(next);
     }
 
   }
 
-  private Collision nextCollision(Collision e) {
+  private Collision nextCollision(Bullet b) {
     Wall nearest = null;
     double t = Float.POSITIVE_INFINITY;
     for (Wall wall : walls) {
-      if (wall == e.wall) continue;
-      double t0 = e.bullet.trace(wall);
+      double t0 = b.trace(wall);
       if (t0 >= 0 && t0 < t) {
         t = t0;
         nearest = wall;
       }
     }
-    return nearest != null ? new Collision(e.bullet.lastCollisionTime + t, e.bullet, nearest) : null;
+    return nearest != null ? new Collision(b.time + t, b, nearest) : null;
   }
 
   class Bullet {
-    double px, py, dx, dy;
-    double lastCollisionTime = 0f;
+    double px, py, dx, dy, time = 0;
 
     Bullet(double px, double py, double dx, double dy) {
       this.px = px;
@@ -87,37 +81,26 @@ class Walls {
       this.dy = dy;
     }
 
-    double getX() {
-      double dt = time - lastCollisionTime;
-      return px + dx * dt;
-    }
-
-    double getY() {
-      double dt = time - lastCollisionTime;
-      return py + dy * dt;
-    }
-
-    void printPosition(PrintStream out) {
-      double dt = time - lastCollisionTime;
+    void printPosition(PrintStream out, double currentTime) {
+      double dt = currentTime - time;
       double x = px + dx * dt;
       double y = py + dy * dt;
       out.printf("%f %f\n", x, y);
     }
 
-    void reflect(Wall w) {
-      double t = trace(w);
-      if (t < 0) return;
+    void reflect(Wall w, double collisionTime) {
       double nx = (w.bx - w.ax);
       double ny = (w.by - w.ay);
       double l2 = nx * nx + ny * ny;
       if (l2 == 0) return;
       double dot = dx * nx + dy * ny;
 
+      double t = collisionTime - time;
       px += dx * t;
       py += dy * t;
-
       dx = -dx + 2 * dot * nx / l2;
       dy = -dy + 2 * dot * ny / l2;
+      time = collisionTime;
     }
 
     double trace(Wall w) {
@@ -147,21 +130,15 @@ class Walls {
       this.by = by;
     }
 
-    @Override
-    public String toString() {
-      return String.format("(%f, %f) - (%f %f)", ax, ay, bx, by);
-    }
-
-    @Override
     public int compareTo(Wall o) {
       return Integer.compare(hashCode(), o.hashCode());
     }
   }
 
   private class Collision implements Comparable<Collision> {
-    double time;
-    Bullet bullet;
-    Wall wall;
+    final double time;
+    final Bullet bullet;
+    final Wall wall;
 
     Collision(double time, Bullet bullet, Wall wall) {
       this.time = time;
@@ -169,7 +146,6 @@ class Walls {
       this.wall = wall;
     }
 
-    @Override
     public int compareTo(Collision o) {
       int cmpTime = Double.compare(time, o.time);
       return cmpTime == 0 ? wall.compareTo(o.wall) : cmpTime;
