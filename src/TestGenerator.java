@@ -10,7 +10,7 @@ public class TestGenerator {
     generateRandom(100, 10, 100, 1f, new PrintStream(name));
   }
 
-  private static void generateRandom(int numWalls, int numBullets, int numQueries, float maxTime, PrintStream stream) {
+  static void generateRandom(int numWalls, int numBullets, int numQueries, float maxTime, PrintStream stream) {
     stream.printf("%d %d %d\n", numWalls, numBullets, numQueries);
     Random random = new Random(SEED);
 
