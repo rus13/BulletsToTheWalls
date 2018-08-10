@@ -45,17 +45,24 @@ class Walls {
 
   void update(double time) {
     while (!collisions.isEmpty() && collisions.first().time <= time) {
-      Collision e = collisions.pollFirst();
-      Bullet b = e.bullet;
-      Wall w = e.wall;
-      if (walls.contains(w)) {
-        b.reflect(w, e.time);
-        walls.remove(w);
+      double eventTime = collisions.first().time;
+      List<Collision> sameTimeEvents = new ArrayList<>();
+      while (!collisions.isEmpty() && collisions.first().time == eventTime) {
+        sameTimeEvents.add(collisions.pollFirst());
       }
-      Collision next = nextCollision(b);
-      if (next != null) collisions.add(next);
+      for (Collision c : sameTimeEvents) {
+        if (walls.contains(c.wall)) {
+          c.bullet.reflect(c.wall, c.time);
+        }
+      }
+      for (Collision c : sameTimeEvents) {
+        walls.remove(c.wall);
+      }
+      for (Collision c : sameTimeEvents) {
+        Collision next = nextCollision(c.bullet);
+        if (next != null) collisions.add(next);
+      }
     }
-
   }
 
   private Collision nextCollision(Bullet b) {
@@ -120,7 +127,7 @@ class Walls {
     }
   }
 
-  class Wall implements Comparable<Wall> {
+  class Wall {
     final double ax, ay, bx, by;
 
     Wall(double ax, double ay, double bx, double by) {
@@ -128,10 +135,6 @@ class Walls {
       this.ay = ay;
       this.bx = bx;
       this.by = by;
-    }
-
-    public int compareTo(Wall o) {
-      return Integer.compare(hashCode(), o.hashCode());
     }
   }
 
@@ -148,7 +151,7 @@ class Walls {
 
     public int compareTo(Collision o) {
       int cmpTime = Double.compare(time, o.time);
-      return cmpTime == 0 ? wall.compareTo(o.wall) : cmpTime;
+      return cmpTime == 0 ? Integer.compare(hashCode(), o.hashCode()) : cmpTime;
     }
   }
 }
